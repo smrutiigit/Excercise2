@@ -24,10 +24,9 @@ def get_db():
 # A SQLAlchemny ORM Place
 class DBItem(Base):
     __tablename__ = 'item'
-    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String(50))
     last_name = Column(String(50))
-    employee_id= Column(String)
     city = Column(String, nullable=True)
     experience = Column(Float)
     ctc = Column(Float)
