@@ -8,9 +8,9 @@ from sqlalchemy import Column, Float, String, Integer
 app = FastAPI()
 
 #SqlAlchemy Setup
-SQLALCHEMY_DATABASE_URL = 'sqlite+pysqlite:///./db.sqlite3:'
+SQLALCHEMY_DATABASE_URL = "sqlite:///./emp.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True, future=True)
-engine = create_engine("mysql://u:p@host/db", pool_size=10, max_overflow=20)
+#engine = create_engine("sqlite:///./emp.db", pool_size=10, max_overflow=20)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -24,9 +24,10 @@ def get_db():
 # A SQLAlchemny ORM Place
 class DBItem(Base):
     __tablename__ = 'item'
-    employee_id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String(50))
     last_name = Column(String(50))
+    employee_id= Column(String)
     city = Column(String, nullable=True)
     experience = Column(Float)
     ctc = Column(Float)
