@@ -28,11 +28,23 @@ def get_db():
 async def root():
     return {'message': 'Hello World!'}
 
+
+def create_emp(db: Session, emp: schema.EmpBase):
+    db_emp = model.DBEmp(**emp.dict())
+    db.add(db_emp)
+    db.commit()
+    db.refresh(db_emp)
+    return db_emp
+
+@app.post('/emps/', response_model=schema.Emp)
+def create_items_view(place: schema.EmpBase, db: Session = Depends(get_db)):
+    db_emp = create_emp(db, place)
+    return db_emp
+
 @app.get('/retrieve_all_emps_details', response_model=List[schema.Emp])
 def retrieve_all_emps_details(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     emps = crud.get_emps(db=db, skip=skip, limit=limit)
     return emps
-
 
 @app.post('/add_new_emp', response_model=schema.EmpAdd)
 def add_new_emp(emp: schema.EmpAdd, db: Session = Depends(get_db)):
@@ -63,5 +75,6 @@ def add_new_emp(emp: schema.EmpAdd, db: Session = Depends(get_db)):
 #
 #    return crud.update_emp_details(db=db, details=update_param, sl_id=sl_id)
     
+
 
 
