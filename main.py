@@ -1,19 +1,22 @@
-from fastapi import FastAPI, Depends
-from pydantic import BaseModel
 from typing import List
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from sqlalchemy import Column, Float, String, Integer
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy.orm import Session
 
-app = FastAPI()
+import crud
+import model
+import schema
+from database import SessionLocal, engine
 
-#SqlAlchemy Setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./emp.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True, future=True)
-#engine = create_engine("sqlite:///./emp.db", pool_size=10, max_overflow=20)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+model.Base.metadata.create_all(bind=engine)
 
+# initiating app
+app = FastAPI(
+    title="Employee Details",
+    description="You can perform CRUD operation by using this API",
+    version="1.0.0"
+)
+
+# Dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -21,69 +24,44 @@ def get_db():
     finally:
         db.close()
 
-# A SQLAlchemny ORM Place
-class DBItem(Base):
-    __tablename__ = 'item'
-    id = Column(Integer, primary_key=True, index=True)
-    first_name = Column(String(50))
-    last_name = Column(String(50))
-    employee_id= Column(String)
-    city = Column(String, nullable=True)
-    experience = Column(Float)
-    ctc = Column(Float)
-    age = Column(Float)
-    contact= Column(String)
-Base.metadata.create_all(bind=engine)
-
-
-#Pydantic place
-class Item(BaseModel):
-    first_name: str
-    last_name:str
-    employee_id: str
-    city: str
-    experience: float
-    ctc:float
-    age:float
-    contact: str
-class Config:
-    orm_mode = True
-
-# Methods for interacting with the database
-def get_item(db: Session, item_id: int):
-    return db.query(DBItem).where(DBItem.id == item_id).first()
-
-def get_items(db: Session):
-    return db.query(DBItem).all()
-
-def create_item(db: Session, item: Item):
-    db_item = DBItem(**item.dict())
-    db.add(db_item)
-    db.commit()
-    db.refresh(db_item)
-    return db_item
-
-# Routes for interacting with the API
-@app.post('/items/', response_model=Item)
-def create_items_view(place: Item, db: Session = Depends(get_db)):
-    db_item = create_item(db, place)
-    return db_item
-
-@app.get('/items/', response_model=List[Item])
-def get_places_view(db: Session = Depends(get_db)):
-    return get_items(db)
-
-@app.get('/item/{item_id}')
-def get_item_view(item_id: int, db: Session = Depends(get_db)):
-    return get_item(db, item_id)
-
 @app.get('/')
 async def root():
     return {'message': 'Hello World!'}
 
+@app.get('/retrieve_all_emps_details', response_model=List[schema.Emp])
+def retrieve_all_emps_details(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    emps = crud.get_emps(db=db, skip=skip, limit=limit)
+    return emps
 
-#@app.post("/items/")
-#def create_item(item:Item):
-#   return item
+
+@app.post('/add_new_emp', response_model=schema.EmpAdd)
+def add_new_emp(emp: schema.EmpAdd, db: Session = Depends(get_db)):
+    employee_id = crud.get_emp_by_employee_id(db=db, employee_id=emp.employee_id)
+    if employee_id:
+        raise HTTPException(status_code=400, detail=f"Employee id {emp.employee_id} already exist in database: {employee_id}")
+    return crud.add_emp_details_to_db(db=db, emp=emp)
+
+
+#@app.delete('/delete_emp_by_id')
+#def delete_emp_by_id(sl_id: int, db: Session = Depends(get_db)):
+#   details = crud.get_emp_by_id(db=db, sl_id=sl_id)
+ #   if not details:
+  #      raise HTTPException(status_code=404, detail=f"No record found to delete")
+
+   # try:
+    #    crud.delete_emp_details_by_id(db=db, sl_id=sl_id)
+    #except Exception as e:
+    #    raise HTTPException(status_code=400, detail=f"Unable to delete: {e}")
+    #return {"delete status": "success"}
+
+
+#@app.put('/update_emp_details', response_model=schema.Emp)
+#def update_emp_details(sl_id: int, update_param: schema.UpdateEmp, db: Session = Depends(get_db)):
+#    details = crud.get_emp_by_id(db=db, sl_id=sl_id)
+#    if not details:
+#       raise HTTPException(status_code=404, detail=f"No record found to update")
+#
+#    return crud.update_emp_details(db=db, details=update_param, sl_id=sl_id)
+    
 
 
